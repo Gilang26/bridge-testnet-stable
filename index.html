@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Bridge Testnet Stable</title>
+<meta name="theme-color" content="#0f1610" />
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<style>
+  :root{
+    --bg1:#0c120c; --bg2:#151e15;
+    --card:#101810; --muted:#203220; --field:#0c150d;
+    --acc1:#22c55e; --acc2:#16a34a; --txt:#dce6dc; --sub:#9ab79f;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background: radial-gradient(circle at 30% -10%, var(--bg2), var(--bg1) 60%);
+    color:var(--txt); font-family:system-ui, Arial, sans-serif;
+  }
+  .wrap{width:min(980px, 96vw)}
+  .head{
+    display:flex; align-items:center; gap:14px; margin-bottom:14px;
+  }
+  .head img{height:42px; width:auto; filter: drop-shadow(0 2px 6px rgba(0,0,0,.3));}
+  .title{font-size:22px; font-weight:800;}
+  .by{color:var(--sub); font-size:12px; margin-left:4px}
+  .card{
+    background: linear-gradient(180deg, rgba(16,24,16,.8), rgba(12,18,12,.8));
+    border:1px solid var(--muted); border-radius:14px; padding:16px; box-shadow:0 10px 24px rgba(0,0,0,.35);
+  }
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .col{background:rgba(20,30,20,.55); border:1px solid var(--muted); border-radius:12px; padding:14px}
+  h3{margin:0 0 6px; color:var(--acc1)}
+  label{display:block; font-size:12px; color:var(--sub); margin-top:8px}
+  input{
+    width:100%; padding:11px; margin-top:6px; border-radius:10px;
+    border:1px solid var(--muted); background:var(--field); color:#fff; font-size:14px;
+  }
+  .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+  button{
+    padding:11px 12px; border-radius:10px; border:0; font-weight:800; cursor:pointer; color:#06110a;
+    background: linear-gradient(90deg, var(--acc1), var(--acc2)); transition: .2s;
+  }
+  button.secondary{background:#223322; color:#bfe7c7}
+  button.ghost{background:#172317; color:#a6c6ad; border:1px solid #224122}
+  button:disabled{opacity:.6; cursor:not-allowed}
+  .full{width:100%}
+  pre{
+    white-space:pre-wrap; background:var(--field); border:1px solid var(--muted);
+    border-radius:12px; padding:14px; margin-top:14px; min-height:140px; color:#d7f6df;
+    box-shadow: inset 0 0 0 1px rgba(34,66,34,.25);
+  }
+  .foot{margin-top:10px; text-align:right; color:var(--sub); font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <img alt="LayerZero" src="https://assets.layerzero.network/logo.svg" />
+    <div class="title">Bridge Testnet Stable</div>
+    <div class="by">by thdx</div>
+  </div>
+
+  <div class="card">
+    <!-- Controls -->
+    <div class="row">
+      <button id="btnConnect" class="secondary">🔌 Connect Wallet</button>
+      <button id="btnSepolia" class="ghost">🔁 Switch to Sepolia (11155111)</button>
+      <button id="btnStable" class="ghost">🔁 Switch to Stable (2201)</button>
+      <div id="addr" style="margin-left:auto; color:#a7d8b1; font-size:13px">Wallet: -</div>
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <!-- BRIDGE -->
+      <div class="col">
+        <h3>🌉 Bridge (Sepolia → Stable)</h3>
+        <label>Adapter (OFT)</label>
+        <input id="bridgeAdapter" value="0xc099cD946d5efCC35A99D64E808c1430cEf08126" />
+        <label>Token (ERC20)</label>
+        <input id="bridgeToken" value="0xc4DCC311c028e341fd8602D8eB89c5de94625927" />
+        <div class="row">
+          <div style="flex:1">
+            <label>dstEid</label>
+            <input id="bridgeDstEid" value="40374" />
+          </div>
+          <div style="flex:1">
+            <label>Amount (dec=6)</label>
+            <input id="bridgeAmount" placeholder="mis: 10" />
+          </div>
+        </div>
+        <label>Penerima (kosongkan = alamat sendiri)</label>
+        <input id="bridgeRecipient" placeholder="0x..." />
+        <div class="row">
+          <button id="btnApprove" class="secondary">✅ Approve</button>
+          <button id="btnBridge">🚀 Bridge Now</button>
+        </div>
+      </div>
+
+      <!-- REDEEM -->
+      <div class="col">
+        <h3>🔁 Redeem (LayerZero)</h3>
+        <label>LayerZero TX Hash (srcTxHash Sepolia)</label>
+        <input id="lzTx" placeholder="0x..." />
+        <div class="row">
+          <div style="flex:1">
+            <label>srcEid</label>
+            <input id="lzSrcEid" value="30101" />
+          </div>
+          <div style="flex:1">
+            <label>Executor (Stable)</label>
+            <input id="lzExecutor" value="0xcAB8F3ed8528655E0C2fad1C504c6CfEccf50B90" />
+          </div>
+        </div>
+        <label>sender32 (bytes32)</label>
+        <input id="lzSender32" placeholder="0x + 64 hex" />
+        <label>payload (hex, abi.encode(address to, uint256 amountLD))</label>
+        <input id="lzPayload" placeholder="0x..." />
+        <div class="row">
+          <button id="btnFetch" class="secondary">🔎 Auto-Fetch</button>
+          <button id="btnDecode" class="ghost">🧪 Decode Payload</button>
+          <button id="btnRedeem">🚀 Redeem</button>
+        </div>
+      </div>
+
+      <!-- UNWRAP -->
+      <div class="col" style="grid-column: 1 / -1">
+        <h3>💧 Unwrap (USDT0 → gUSDT)</h3>
+        <div class="row">
+          <div style="flex:1">
+            <label>USDT0 (Stable)</label>
+            <input id="uwToken" value="0x78cf24370174180738C5B8E352B6D14c83A6C9A9" />
+          </div>
+          <div style="flex:1">
+            <label>Wrapper (depositTo)</label>
+            <input id="uwWrapper" value="0xcAB8F3ed8528655E0C2fad1C504c6CfEccf50B90" />
+          </div>
+        </div>
+        <div class="row">
+          <div style="flex:1">
+            <label>Amount (dec=6)</label>
+            <input id="uwAmount" placeholder="mis: 10" />
+          </div>
+          <div style="flex:1; display:flex; gap:10px; align-items:flex-end">
+            <button id="btnUwrap" class="full">🚀 Unwrap Now</button>
+          </div>
+        </div>
+        <div id="uwBalance" style="margin-top:6px; color:#b7e7c1; font-size:13px">Saldo USDT0: -</div>
+      </div>
+    </div>
+
+    <pre id="log">log siap...</pre>
+    <div class="foot">by thdx</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------- Shared ----------
+  const STABLE = { id:2201, hex:"0x899", rpc:"https://stable-jsonrpc.testnet.chain0.dev", explorer:"https://blockscout.testnet.stable.xyz" };
+  const SEPOLIA= { id:11155111, hex:"0xaa36a7" };
+  const ERC20_ABI = ["function approve(address,uint256) returns(bool)","function balanceOf(address) view returns (uint256)"];
+  const OFT_ABI   = [
+    "function quoteSend((uint32,bytes32,uint256,uint256,bytes,bytes,bytes),bool)view returns(uint256 nativeFee,uint256 zroFee)",
+    "function send((uint32,bytes32,uint256,uint256,bytes,bytes,bytes),(uint256,uint256),address)payable"
+  ];
+  const LZ_ABI    = ["function lzReceive(uint32,bytes32,bytes,address) external"];
+
+  const $ = id => document.getElementById(id);
+  const log = (m)=>{ const el=$("log"); el.textContent+=(el.textContent?"\n":"")+m; el.scrollTop=el.scrollHeight; console.log(m); };
+
+  let provider, signer, me;
+
+  async function connect(){
+    try{
+      if(!window.ethereum) throw new Error("Buka di browser MetaMask/OKX/Trust.");
+      provider = new ethers.providers.Web3Provider(window.ethereum,"any");
+      await provider.send("eth_requestAccounts",[]);
+      signer = provider.getSigner();
+      me = await signer.getAddress();
+      const net = await provider.getNetwork();
+      $("addr").textContent = `Wallet: ${me.slice(0,6)}…${me.slice(-4)} | Chain: ${net.chainId}`;
+      log(`✅ Connected: ${me}\nChain: ${net.chainId}`);
+      // Prefill recipient for bridge
+      if(!$("bridgeRecipient").value) $("bridgeRecipient").value = me;
+      // Update USDT0 balance if on Stable
+      if (net.chainId===STABLE.id) updateUwBalance();
+    }catch(e){ log("❌ Connect error: " + (e.message||e)); }
+  }
+  async function switchTo(chain){
+    try{
+      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:chain.hex}] });
+      const net = await provider.getNetwork();
+      $("addr").textContent = `Wallet: ${me.slice(0,6)}…${me.slice(-4)} | Chain: ${net.chainId}`;
+      log(`🔁 Switched to chain ${net.chainId}`);
+      if (net.chainId===STABLE.id) updateUwBalance();
+    }catch(e){
+      if(e.code===4902){
+        const add = {
+          chainId: chain.hex,
+          chainName: chain===STABLE ? "Stable Testnet" : "Sepolia",
+          rpcUrls: chain===STABLE ? [STABLE.rpc] : [],
+          blockExplorerUrls: chain===STABLE ? [STABLE.explorer] : [],
+          nativeCurrency:{name:"ETH",symbol:"ETH",decimals:18}
+        };
+        await window.ethereum.request({ method:"wallet_addEthereumChain", params:[add] });
+      } else {
+        log("⚠️ Switch error: " + (e.message||e));
+      }
+    }
+  }
+
+  // ---------- BRIDGE ----------
+  async function approveBridge(){
+    try{
+      const token   = $("bridgeToken").value.trim();
+      const adapter = $("bridgeAdapter").value.trim();
+      const amountS = $("bridgeAmount").value.trim();
+      if(!amountS) return log("⚠️ Isi amount dulu.");
+      const amt = ethers.utils.parseUnits(amountS, 6);
+      const erc = new ethers.Contract(token, ERC20_ABI, signer);
+      log("🧾 Approve LZ... ⏳");
+      const tx = await erc.approve(adapter, amt);
+      log(`⏳ Approve TX: ${tx.hash}`);
+      await tx.wait();
+      log("✅ Approve sukses!");
+    }catch(e){ log("❌ Approve error: " + (e.message||e)); }
+  }
+  async function bridgeNow(){
+    try{
+      const adapter = $("bridgeAdapter").value.trim();
+      const dstEid  = Number($("bridgeDstEid").value.trim());
+      const amountS = $("bridgeAmount").value.trim();
+      const recipient = ($("bridgeRecipient").value.trim() || me).toLowerCase();
+      if(!amountS) return log("⚠️ Isi amount dulu.");
+      const amountLD = ethers.utils.parseUnits(amountS, 6);
+      const to32 = "0x" + recipient.replace(/^0x/,"").padStart(64,"0");
+      const oft = new ethers.Contract(adapter, OFT_ABI, signer);
+      const sendParamArr = [dstEid, to32, amountLD, amountLD, "0x","0x","0x"];
+
+      log("1️⃣ Estimating fee...");
+      const fee = await oft.quoteSend(sendParamArr, false);
+
+      const parseFee = (feeObj)=>{
+        if(ethers.BigNumber.isBigNumber(feeObj)) return feeObj;
+        if(typeof feeObj==="object" && feeObj.nativeFee) return ethers.BigNumber.from(feeObj.nativeFee._hex||feeObj.nativeFee);
+        if(feeObj._hex) return ethers.BigNumber.from(feeObj._hex);
+        if(Array.isArray(feeObj)) return ethers.BigNumber.from(feeObj[0]._hex||feeObj[0]);
+        throw new Error("Format fee tidak dikenali");
+      };
+      const nativeFee = parseFee(fee);
+      const feeStructArr=[nativeFee, ethers.BigNumber.from(0)];
+      const senderAddr = await signer.getAddress();
+
+      log(`💰 Fee: ${ethers.utils.formatEther(nativeFee)} ETH`);
+      log("2️⃣ Sending transaction...");
+      const tx = await oft.send(sendParamArr, feeStructArr, senderAddr, { value:nativeFee, gasLimit:350000 });
+      log(`⏳ TX: ${tx.hash}`);
+      await tx.wait();
+      log("✅ Bridge sukses! 🎉 Token akan muncul di Stable Testnet (setelah relayer).");
+    }catch(e){
+      const msg = (e.error && e.error.message) || e.reason || e.message || String(e);
+      log("❌ Bridge error: " + msg);
+    }
+  }
+
+  // ---------- REDEEM ----------
+  function addrTo32(a){ const c=ethers.utils.getAddress(a); return "0x"+c.slice(2).padStart(64,"0"); }
+  function smartPickHexes(text){
+    const hexes = text.match(/0x[0-9a-fA-F]{64,}/g) || [];
+    const uniq = [...new Set(hexes)];
+    const out = { sender32:null, payload:null };
+    const senders = uniq.filter(h => h.length===66);
+    if (senders.length) out.sender32 = senders[0];
+    const payloads = uniq.filter(h => h.length>66 && h.length%2===0);
+    if (payloads.length) out.payload = payloads[0];
+    return out;
+  }
+  async function fetchText(u){ const r=await fetch(u,{mode:"cors"}); if(!r.ok) throw new Error(`HTTP ${r.status}`); return await r.text(); }
+
+  async function lzAutoFetch(){
+    const tx = $("lzTx").value.trim();
+    if(!/^0x[0-9a-fA-F]{64}$/.test(tx)) return log("⚠️ TX hash tidak valid.");
+    log("⏳ Fetching LayerZeroScan...");
+    const urls = [
+      `https://testnet.layerzeroscan.com/tx/${tx}`,
+      `https://api.testnet.layerzeroscan.com/tx/${tx}`,
+      `https://api-testnet.layerzeroscan.com/tx/${tx}`
+    ];
+    let html=null, used=null;
+    for(const u of urls){ try{ html=await fetchText(u); used=u; break; }catch{} }
+    if(!html) return log("⚠️ Tidak bisa ambil dari LZScan (CORS/API).");
+    log(`🔍 Got from: ${used} (len=${html.length})`);
+    const {sender32, payload} = smartPickHexes(html);
+    if(sender32){ $("lzSender32").value = sender32; log(`👤 sender32: ${sender32}`);}
+    else log("⚠️ sender32 tidak ditemukan.");
+    if(payload){
+      $("lzPayload").value = payload;
+      log(`📦 payload: ${payload.slice(0,66)}...`);
+      try{
+        const [to, amt] = ethers.utils.defaultAbiCoder.decode(["address","uint256"], payload);
+        log(`🧪 decoded → to=${to}, amount=${ethers.utils.formatUnits(amt,6)}`);
+      }catch{}
+    } else log("⚠️ payload tidak ditemukan.");
+  }
+
+  function lzDecode(){
+    try{
+      const p=$("lzPayload").value.trim();
+      if(!/^0x[0-9a-fA-F]+$/.test(p)) return log("⚠️ payload tidak valid.");
+      const [to, amt] = ethers.utils.defaultAbiCoder.decode(["address","uint256"], p);
+      log(`🧪 decoded → to=${to}, amount=${ethers.utils.formatUnits(amt,6)}`);
+    }catch(e){ log("❌ Decode error: " + (e.message||e)); }
+  }
+
+  async function lzRedeem(){
+    try{
+      const net = await provider.getNetwork();
+      if (net.chainId!==STABLE.id) await switchTo(STABLE);
+
+      const srcEid   = Number($("lzSrcEid").value.trim()||"30101");
+      const sender32 = $("lzSender32").value.trim();
+      const payload  = $("lzPayload").value.trim();
+      if(!/^0x[0-9a-fA-F]{64}$/.test(sender32)) return log("⚠️ sender32 harus 32-byte hex.");
+      if(!/^0x[0-9a-fA-F]+$/.test(payload))     return log("⚠️ payload tidak valid (hex).");
+
+      const executors = [$("lzExecutor").value.trim()];
+      // bisa tambah fallback lewat koma kalau mau
+      const c = new ethers.Contract(executors[0], LZ_ABI, signer);
+      log(`🚀 lzReceive on ${executors[0]} ...`);
+      const tx = await c.lzReceive(srcEid, sender32, payload, executors[0], { gasLimit:600000 });
+      log(`⏳ TX: ${tx.hash}`);
+      const rc = await tx.wait();
+      log(`✅ Delivered at block ${rc.blockNumber}`);
+    }catch(e){
+      log("❌ Redeem error: " + (e.data?.message || e.message || e));
+      log("💡 Banyak OApp membatasi caller lzReceive untuk relayer resmi. Jika revert, tunggu relayer.");
+    }
+  }
+
+  // ---------- UNWRAP ----------
+  async function updateUwBalance(){
+    try{
+      const token = $("uwToken").value.trim();
+      const erc = new ethers.Contract(token, ERC20_ABI, provider);
+      const bal = await erc.balanceOf(me);
+      $("uwBalance").textContent = `Saldo USDT0: ${Number(ethers.utils.formatUnits(bal,6))}`;
+    }catch(e){ $("uwBalance").textContent = "Saldo USDT0: (gagal baca)"; }
+  }
+
+  async function unwrapNow(){
+    try{
+      const net = await provider.getNetwork();
+      if (net.chainId!==STABLE.id) await switchTo(STABLE);
+
+      const token = $("uwToken").value.trim();
+      const wrap  = $("uwWrapper").value.trim();
+      const amtS  = $("uwAmount").value.trim();
+      if(!amtS) return log("⚠️ Isi amount unwrap dulu.");
+      const amtLD = ethers.utils.parseUnits(amtS, 6);
+
+      const erc = new ethers.Contract(token, ERC20_ABI, signer);
+      const bal = await erc.balanceOf(me);
+      if (bal.lt(amtLD)) return log("❌ Saldo USDT0 tidak cukup.");
+
+      log(`🧾 Approving ${amtS} USDT0 ke ${wrap} ...`);
+      const txA = await erc.approve(wrap, amtLD);
+      log(`⏳ Approve TX: ${txA.hash}`); await txA.wait();
+      log("✅ Approve sukses!");
+
+      const wrapper = new ethers.Contract(wrap, ["function depositTo(address,uint256) external"], signer);
+      const txB = await wrapper.depositTo(me, amtLD);
+      log(`🚀 Unwrap TX: ${txB.hash}`); await txB.wait();
+      log("✅ USDT0 sukses diubah jadi gUSDT 🎉");
+      updateUwBalance();
+    }catch(e){ log("❌ Unwrap error: " + (e.data?.message || e.message || e)); }
+  }
+
+  // ---------- Bind UI ----------
+  $("btnConnect").onclick = connect;
+  $("btnSepolia").onclick = ()=> switchTo(SEPOLIA);
+  $("btnStable").onclick  = ()=> switchTo(STABLE);
+  $("btnApprove").onclick = approveBridge;
+  $("btnBridge").onclick  = bridgeNow;
+  $("btnFetch").onclick   = lzAutoFetch;
+  $("btnDecode").onclick  = lzDecode;
+  $("btnRedeem").onclick  = lzRedeem;
+  $("btnUwrap").onclick   = unwrapNow;
+})();
+</script>
+</body>
+</html>
